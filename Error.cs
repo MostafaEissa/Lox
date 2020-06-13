@@ -11,7 +11,7 @@
         {
             this.Type = type;
             this.Line = Line;
-            this.Message = Message;
+            this.Message = message;
         }
     }
 }

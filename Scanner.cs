@@ -148,7 +148,7 @@ namespace Lox
                     if (IsAtEnd) return '\0';
                     return _source[_current];
                 case 1:
-                    if (_current + 1 > _source.Length) return '\0';
+                    if (_current + 1 >= _source.Length) return '\0';
                     return _source[_current + 1];
                 default:
                     throw new NotSupportedException($"Look Ahead of {num} is not supported.");
@@ -185,7 +185,7 @@ namespace Lox
             //the closing "
             Advance();
 
-            string value = _source.Substring(_start + 1, _current - 1 - (_start + 1));
+            string value = _source.Substring(_start + 1, _current - _start  - 2 /*remove quotes*/);
             AddToken(TokenType.String, value);
         }
 
