@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 namespace Lox
 {
@@ -8,18 +9,24 @@ namespace Lox
       
         public bool Run(string source)
         {
-            var scanner = new Scanner();
-            scanner.ScanTokens(source);
+            var scanner = new Scanner(source);
+            scanner.ScanTokens();
+
+            var parser = new Parser(scanner.GetTokens().ToList());
+            var result = parser.Parse();
 
             foreach (var error in scanner.GetErrors())
             {
-                Report(error.Line, "", error.Message);
+                Report(error.Line, error.Where , error.Message);
             }
 
-            foreach (var token in scanner.GetTokens())
+            foreach (var error in parser.GetErrors())
             {
-                Console.WriteLine(token);
+                Report(error.Line, error.Where,  error.Message);
             }
+
+            if (!_hadError)
+                Console.WriteLine(new AbstractSyntaxTreePrinter().Print(result));
 
             return _hadError;
         }

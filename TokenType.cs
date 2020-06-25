@@ -1,6 +1,6 @@
 ﻿namespace Lox
 {
-    enum TokenType
+    public enum TokenType
     {
         // single character tokens
         LeftParen,
@@ -51,5 +51,47 @@
 
         // end of file
         Eof
+    }
+
+    public static class TokenTypeHelper
+    {
+        public static int GetUnaryOperatorPrecendence(this TokenType type)
+        {
+            switch (type)
+            {
+                case TokenType.Minus:
+                case TokenType.Bang:
+                    return 4;
+
+                default:
+                    return 0;
+            }
+        }
+
+        public static int GetBinaryOperatorPrecendence(this TokenType type)
+        {
+            switch (type)
+            {
+                case TokenType.Star:
+                case TokenType.Slash:
+                    return 3;
+
+                case TokenType.Minus:
+                case TokenType.Plus:
+                    return 2;
+
+                case TokenType.EqualEqual:
+                case TokenType.BangEqual:
+                case TokenType.Less:
+                case TokenType.LessEqual:
+                case TokenType.Greater:
+                case TokenType.GreaterEqual:
+                    return 1;
+
+                default:
+                    return 0;
+            }
+        }
+
     }
 }

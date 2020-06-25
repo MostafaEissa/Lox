@@ -19,8 +19,7 @@ namespace Lox
                     return Parenthesize(e.Operator.Lexeme, e.Right);
 
                 case LiteralExpression e:
-                    if (e.Value == null) return "Nil";
-                    return e.Value.ToString();
+                    return e.Value.Map(v => v.ToString()!).Or("Nil");
 
                 default:
                     return String.Empty;

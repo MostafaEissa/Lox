@@ -1,12 +1,14 @@
-﻿namespace Lox
+﻿using static Lox.Optional;
+
+namespace Lox
 {
     sealed class LiteralExpression : IExpression
     {
-        public object Value { get; }
+        public Option<object> Value { get; }
 
-        public LiteralExpression(object value)
+        public LiteralExpression(object? value)
         {
-            Value = value;
+            Value = value ?? None;
         }
 
         public SyntaxKind Kind => SyntaxKind.LiteralExpression;

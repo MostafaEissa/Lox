@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.ComponentModel;
 using System.Data;
 using System.IO;
@@ -7,7 +8,6 @@ using System.Threading;
 
 namespace Lox
 {
-
     class Program
     {
         static void Main(string[] args)

@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data.Common;
+using System.Diagnostics.Tracing;
 using System.Globalization;
+using System.Runtime.CompilerServices;
+using static Lox.Optional;
 
 namespace Lox
 {
@@ -44,17 +48,22 @@ namespace Lox
             return _errors;
         }
 
-        public void ScanTokens(string source)
+        public Scanner(string source)
         {
-            this._source = source;
+            _source = source;
 
+        }
+
+        public void ScanTokens()
+        {
+            
             while (!IsAtEnd)
             {
                 _start = _current;
                 ScanToken();
             }
 
-            _tokens.Add(new Token(TokenType.Eof, "", null, _line));
+            _tokens.Add(new Token(TokenType.Eof, "", None, _line));
         }
 
         private bool IsAtEnd => _current >= _source.Length;
@@ -156,7 +165,12 @@ namespace Lox
            
         }
 
-        private void AddToken(TokenType type, object literal = null)
+        private void AddToken(TokenType type)
+        {
+            AddToken(type, None);
+        }
+
+        private void AddToken(TokenType type, object literal)
         {
             string text = _source.Substring(_start, _current - _start);
             _tokens.Add(new Token(type, text, literal, _line));
