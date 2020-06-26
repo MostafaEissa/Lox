@@ -1,4 +1,4 @@
-﻿using static Lox.Optional;
+﻿using static Lox.Functional;
 
 namespace Lox
 {

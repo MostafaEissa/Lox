@@ -2,6 +2,10 @@
 
 namespace Lox
 {
+    public static class Functional
+    {
+        public static Nothing None { get; } = Nothing.Instance;
+    }
     abstract class Option<T>
     {
       
@@ -9,7 +13,7 @@ namespace Lox
         {
             return new Some<T>(value);
         }
-        public static implicit operator Option<T>(Optional none)
+        public static implicit operator Option<T>(Nothing none)
         {
             return new None<T>();
         }
@@ -19,10 +23,16 @@ namespace Lox
 
     }
 
-    public class Optional
+    public class Nothing
     {
-        public static Optional None { get; } = new Optional();
-        private Optional() { }
+        public static Nothing Instance { get; } = new Nothing();
+
+        private Nothing() { }
+
+        public override string ToString()
+        {
+            return "nil";
+        }
 
     }
 
@@ -44,17 +54,27 @@ namespace Lox
             return Value;
         }
 
+        public override string ToString()
+        {
+            return Value.ToString();
+        }
+
     }
 
     class None<T> : Option<T>
     {
         public override Option<TResult> Map<TResult>(Func<T, TResult> map)
         {
-            return Optional.None;
+            return Functional.None;
         }
         public override T Or(T whenNone)
         {
             return whenNone;
+        }
+
+        public override string ToString()
+        {
+            return "nil";
         }
     }
 

@@ -5,7 +5,7 @@ using System.Data.Common;
 using System.Diagnostics.Tracing;
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using static Lox.Optional;
+using static Lox.Functional;
 
 namespace Lox
 {
@@ -33,7 +33,6 @@ namespace Lox
             {"class",  TokenType.Class},
             {"this",   TokenType.This},
             {"super",  TokenType.Super},
-            {"this",   TokenType.This},
             {"let",    TokenType.Let},
            
         };
@@ -221,7 +220,11 @@ namespace Lox
         {
             while (IsAlphaNumeric(Peek())) Advance();
 
-            AddToken(TokenType.Identifier);
+            var text = _source.Substring(_start, _current - _start);
+            if (Keywords.TryGetValue(text, out TokenType tokenType))
+                AddToken(tokenType);
+            else
+                AddToken(TokenType.Identifier);
         }
 
         private bool IsAlpha(char c) =>    (c >= 'a' && c <= 'z') ||   (c >= 'A' && c <= 'Z') ||  c == '_'; 

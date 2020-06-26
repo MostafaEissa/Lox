@@ -6,14 +6,13 @@ namespace Lox
     sealed class LoxInterpreter
     {
         private bool _hadError;
-      
         public bool Run(string source)
         {
             var scanner = new Scanner(source);
             scanner.ScanTokens();
 
             var parser = new Parser(scanner.GetTokens().ToList());
-            var result = parser.Parse();
+            var expressionTree = parser.Parse();
 
             foreach (var error in scanner.GetErrors())
             {
@@ -25,11 +24,21 @@ namespace Lox
                 Report(error.Line, error.Where,  error.Message);
             }
 
-            if (!_hadError)
-                Console.WriteLine(new AbstractSyntaxTreePrinter().Print(result));
-
+           
+            var evaluator = new Evaluator();
+            try
+            {
+                var result = evaluator.Evaluate(expressionTree);
+                Console.WriteLine(result);
+            }
+            catch (RuntimeError error)
+            {
+                Report(error.Token.Line, "", error.Message);
+            }
+            
             return _hadError;
         }
+
 
         private void Report(int line, string where, string message)
         {
