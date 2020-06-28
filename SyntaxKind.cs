@@ -6,6 +6,12 @@
         UnaryExpression,
         GroupingExpression,
         LiteralExpression,
+        VariableExpression,
+        AssignmentExpression,
+        ExpressionStatement,
+        BlockStatement,
+        PrintStatement,
+        VariableDeclarationStatement,
     }
 
    

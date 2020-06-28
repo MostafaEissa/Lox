@@ -1,10 +1,10 @@
 ﻿namespace Lox
 {
-    sealed class GroupingExpression : IExpression
+    sealed class GroupingExpression : SyntaxNode
     {
-        public IExpression Expression { get; }
+        public SyntaxNode Expression { get; }
 
-        public GroupingExpression(IExpression expression)
+        public GroupingExpression(SyntaxNode expression)
         {
             Expression = expression;
         }

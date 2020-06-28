@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection.Metadata;
+using System.Text.Json.Serialization;
+using static Lox.Functional;
 
 namespace Lox
 {
@@ -11,12 +14,78 @@ namespace Lox
             Token = token;
         }
     }
-    class Evaluator 
+
+    class Environment
     {
-        public object Evaluate(IExpression expression)
+        private Dictionary<String, Object?> _values = new Dictionary<String, object?>();
+
+        private Environment? _enclosing;
+
+        public Environment(Environment? enclosing = null)
         {
-            switch (expression.Kind) 
+            _enclosing = enclosing;
+        }
+
+
+        public void Define(String name, object? value)
+        {
+            _values[name] =  value;
+        }
+
+        public object Get(Token name)
+        {
+            if (_values.TryGetValue(name.Lexeme, out object? value))
+                return value ?? None;
+
+            if (_enclosing != null) return _enclosing.Get(name);
+
+            throw new RuntimeError(name, $"Undefined variable {name.Lexeme}.");
+        }
+
+       
+        public void Assign(Token name, object? value)
+        {
+            if (_values.ContainsKey(name.Lexeme))
+                _values[name.Lexeme] = value;
+
+            else if (_enclosing != null)
+                _enclosing.Assign(name, value);
+
+            else
+                throw new RuntimeError(name, $"Undefined variable {name.Lexeme}.");
+        }
+    }
+
+    class Evaluator
+    {
+        private Environment _environment = new Environment();
+        public void Evaluate(List<SyntaxNode> expressions)
+        {
+            foreach (var expression in expressions)
             {
+                Evaluate(expression);
+            }
+        }
+
+        private object Evaluate(SyntaxNode expression)
+        {
+            switch (expression.Kind)
+            {
+                case SyntaxKind.PrintStatement:
+                    var result = Evaluate(((PrintStatement)expression).Expression);
+                    Console.WriteLine(result);
+                    return System.ValueTuple.Create();
+                case SyntaxKind.ExpressionStatement:
+                    Evaluate(((ExpressionStatement)expression).Expression);
+                    return System.ValueTuple.Create();
+                case SyntaxKind.VariableDeclarationStatement:
+                    return EvaluateVariableDeclartionStatement((VariableDeclarationStatement)expression);
+                case SyntaxKind.BlockStatement:
+                    return EvaluateBlockStatement((BlockStatement)expression);
+                case SyntaxKind.VariableExpression:
+                    return EvaluateVariableExpression((VariableExpression)expression);
+                case SyntaxKind.AssignmentExpression:
+                    return EvaluateAssignmentExpression((AssignmentExpression)expression);
                 case SyntaxKind.BinaryExpression:
                     return EvaluateBinaryExpression((BinaryExpression)expression);
                 case SyntaxKind.GroupingExpression:
@@ -28,6 +97,48 @@ namespace Lox
                 default:
                     throw new NotSupportedException();
             }
+        }
+
+        private object EvaluateBlockStatement(BlockStatement expr)
+        {
+            EvaluateBlock(expr.Statements, new Environment(_environment));
+            return null;
+        }
+
+        private void EvaluateBlock(List<SyntaxNode> statements, Environment environment)
+        {
+            var previous = _environment;
+            try
+            {
+                this._environment = environment;
+                foreach (var statement in statements)
+                    Evaluate(statement);
+            }
+            finally
+            {
+                this._environment = previous;
+            }
+        }
+
+        private object EvaluateAssignmentExpression(AssignmentExpression expr)
+        {
+            var value = Evaluate(expr.Value);
+            _environment.Assign(expr.Name, value);
+            return value;
+        }
+        private object EvaluateVariableDeclartionStatement(VariableDeclarationStatement expr)
+        {
+            object value = null;
+            if (expr.Initializer != null)
+                value = Evaluate(expr.Initializer);
+
+            _environment.Define(expr.Name.Lexeme, value);
+            return null;
+        }
+
+        private object EvaluateVariableExpression(VariableExpression expr)
+        {
+            return _environment.Get(expr.Name);
         }
 
         private object EvaluateLiteralExpression(LiteralExpression expr)

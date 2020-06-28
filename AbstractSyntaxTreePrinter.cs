@@ -5,7 +5,7 @@ namespace Lox
 {
     class AbstractSyntaxTreePrinter
     {
-        public string Print(IExpression expr)
+        public string Print(SyntaxNode expr)
         {
             switch(expr)
             {
@@ -26,7 +26,7 @@ namespace Lox
             }
         }
 
-        private string Parenthesize(string name, params IExpression[] exprs)
+        private string Parenthesize(string name, params SyntaxNode[] exprs)
         {
             StringBuilder builder = new StringBuilder();
             builder.Append("(").Append(name);

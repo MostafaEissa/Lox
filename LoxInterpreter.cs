@@ -5,7 +5,8 @@ namespace Lox
 {
     sealed class LoxInterpreter
     {
-        private bool _hadError;
+        private bool _hadError = false;
+        private Evaluator _evaluator = new Evaluator();
         public bool Run(string source)
         {
             var scanner = new Scanner(source);
@@ -25,11 +26,10 @@ namespace Lox
             }
 
            
-            var evaluator = new Evaluator();
+         
             try
             {
-                var result = evaluator.Evaluate(expressionTree);
-                Console.WriteLine(result);
+                _evaluator.Evaluate(expressionTree);
             }
             catch (RuntimeError error)
             {

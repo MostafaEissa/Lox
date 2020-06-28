@@ -2,7 +2,7 @@
 
 namespace Lox
 {
-    sealed class LiteralExpression : IExpression
+    sealed class LiteralExpression : SyntaxNode
     {
         public Option<object> Value { get; }
 

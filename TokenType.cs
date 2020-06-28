@@ -48,6 +48,7 @@
         This,
         Super,
         Let,
+        Print,
 
         // end of file
         Eof

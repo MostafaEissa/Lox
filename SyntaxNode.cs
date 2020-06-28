@@ -1,6 +1,6 @@
 ﻿namespace Lox
 {
-    interface IExpression
+    interface SyntaxNode
     {
         SyntaxKind Kind { get; }
     }

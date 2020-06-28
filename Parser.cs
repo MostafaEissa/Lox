@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace Lox
 {
@@ -16,9 +17,15 @@ namespace Lox
             _tokens = tokens;
         }
 
-        public IExpression Parse()
+        public List<SyntaxNode> Parse()
         {
-            return ParseExpression();
+            var stmts = new List<SyntaxNode>();
+            while (!IsAtEnd())
+            {
+                stmts.Add(ParseDeclaration());
+            }
+
+            return stmts;
         }
 
         public IEnumerable<Error> GetErrors()
@@ -26,20 +33,97 @@ namespace Lox
             return _errors;
         }
 
-        private IExpression ParseExpression()
+        private SyntaxNode ParseStatement()
         {
-            return ParseBinaryExpression();
+            
+            if (Match(TokenType.Print)) return ParsePrintStatement();
+            if (Match(TokenType.LeftBrace)) return ParseBlockStatement();
+
+            //TODO: add more statement types
+            return ParseExpressionStatement();
         }
 
-        private IExpression ParseBinaryExpression(int parentPrecedence = 0)
+
+        private SyntaxNode ParseDeclaration()
         {
-            IExpression left;
+            if (Match(TokenType.Let)) return ParseVariableDeclaration();
+            return ParseStatement();
+        }
+
+
+        private SyntaxNode ParseVariableDeclaration()
+        {
+            Consume(TokenType.Identifier, "Expect variable name.");
+            Token name = Previous();
+
+            SyntaxNode initializer = null;
+            if (Match(TokenType.Equal)) initializer = ParseExpression();
+
+            Consume(TokenType.Semicolon, "Expect ; after variable declaration");
+            return new VariableDeclarationStatement(name, initializer);
+        }
+
+        private SyntaxNode ParseBlockStatement()
+        {
+            var statements = new List<SyntaxNode>();
+
+            while(!Check(TokenType.RightBrace) && !IsAtEnd())
+            {
+                statements.Add(ParseDeclaration());
+            }
+
+            Consume(TokenType.RightBrace, "Expect '}' after block.");
+            return new BlockStatement(statements);
+        }
+
+        private SyntaxNode ParsePrintStatement()
+        {
+            SyntaxNode expr = ParseExpression();
+            Consume(TokenType.Semicolon, "Expect ; after expression");
+            return new PrintStatement(expr);
+        }
+        private SyntaxNode ParseExpressionStatement()
+        {
+            SyntaxNode expr = ParseExpression();
+            Consume(TokenType.Semicolon, "Expect ; after expression");
+            return new ExpressionStatement(expr);
+        }
+
+        private SyntaxNode ParseExpression()
+        {
+            return ParseAssignmentExpression();
+        }
+
+        private SyntaxNode ParseAssignmentExpression()
+        {
+            SyntaxNode expr = ParseBinaryExpression();
+
+            if (Match(TokenType.Equal))
+            {
+                Token equals = Previous();
+                SyntaxNode value = ParseAssignmentExpression();
+
+                if (expr is VariableExpression)
+                {
+                    Token name = ((VariableExpression)expr).Name;
+                    return new AssignmentExpression(name, value);
+                }
+
+                Error(equals, "Invalid Assignment Target");
+            }
+
+            return expr;
+        }
+
+        private SyntaxNode ParseBinaryExpression(int parentPrecedence = 0)
+        {
+            SyntaxNode left;
 
             var unaryPrecedence = Peek().Type.GetUnaryOperatorPrecendence();
             if (unaryPrecedence != 0 && unaryPrecedence >= parentPrecedence)
             {
                 Token oper = Advance();
-                IExpression right = ParseBinaryExpression(unaryPrecedence);
+                SyntaxNode right = ParseBinaryExpression(unaryPrecedence);
                 left = new UnaryExpression(oper, right);
             }
             else
@@ -53,7 +137,7 @@ namespace Lox
                 if (binaryPrecedence != 0 && binaryPrecedence > parentPrecedence)
                 {
                     Token oper = Advance();
-                    IExpression right = ParseBinaryExpression(binaryPrecedence);
+                    SyntaxNode right = ParseBinaryExpression(binaryPrecedence);
                     left = new BinaryExpression(left, oper, right);
                 }
                 else
@@ -66,7 +150,7 @@ namespace Lox
             return left;
         }
 
-        private IExpression ParsePrimaryExpression()
+        private SyntaxNode ParsePrimaryExpression()
         {
             switch(Peek().Type)
             {
@@ -83,8 +167,11 @@ namespace Lox
                 case TokenType.String:
                     Match(TokenType.Number, TokenType.String);
                     return new LiteralExpression(Previous().Literal);
+                case TokenType.Identifier:
+                    Match(TokenType.Identifier);
+                    return new VariableExpression(Previous());
                 case TokenType.LeftParen:
-                    IExpression expr = ParseExpression();
+                    SyntaxNode expr = ParseExpression();
                     Consume(TokenType.RightParen, "Expect ')' after expression");
                     return new GroupingExpression(expr);
 
@@ -139,7 +226,11 @@ namespace Lox
         private void Consume(TokenType type, string message)
         {
             if (Check(type)) Advance();
-            else Error(Peek(), message);
+            else
+            {
+                Error(Peek(), message);
+                Synchronize();
+            }
         }
 
         private void Error(Token token, string message)

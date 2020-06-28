@@ -34,6 +34,7 @@ namespace Lox
             {"this",   TokenType.This},
             {"super",  TokenType.Super},
             {"let",    TokenType.Let},
+            {"print",  TokenType.Print },
            
         };
 

@@ -1,11 +1,11 @@
 ﻿namespace Lox
 {
-    sealed class UnaryExpression : IExpression
+    sealed class UnaryExpression : SyntaxNode
     {
-        public IExpression Right { get; }
+        public SyntaxNode Right { get; }
         public Token Operator { get; }
 
-        public UnaryExpression(Token oper, IExpression right)
+        public UnaryExpression(Token oper, SyntaxNode right)
         {
             Operator = oper;
             Right = right;
