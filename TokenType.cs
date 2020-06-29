@@ -47,7 +47,7 @@
         Class,
         This,
         Super,
-        Let,
+        Var,
         Print,
 
         // end of file
@@ -62,7 +62,7 @@
             {
                 case TokenType.Minus:
                 case TokenType.Bang:
-                    return 4;
+                    return 6;
 
                 default:
                     return 0;
@@ -75,11 +75,11 @@
             {
                 case TokenType.Star:
                 case TokenType.Slash:
-                    return 3;
+                    return 5;
 
                 case TokenType.Minus:
                 case TokenType.Plus:
-                    return 2;
+                    return 4;
 
                 case TokenType.EqualEqual:
                 case TokenType.BangEqual:
@@ -87,6 +87,12 @@
                 case TokenType.LessEqual:
                 case TokenType.Greater:
                 case TokenType.GreaterEqual:
+                    return 3;
+
+                case TokenType.AndAnd:
+                    return 2;
+                
+                case TokenType.OrOr:
                     return 1;
 
                 default:

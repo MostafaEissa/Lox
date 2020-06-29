@@ -25,6 +25,8 @@ namespace Lox
             {"else",   TokenType.Else},
             {"true",   TokenType.True},
             {"false",  TokenType.False},
+            {"and", TokenType.AndAnd},
+            {"or", TokenType.OrOr},
             {"for",    TokenType.For},
             {"while",  TokenType.While},
             {"fun",    TokenType.Fun},
@@ -33,7 +35,7 @@ namespace Lox
             {"class",  TokenType.Class},
             {"this",   TokenType.This},
             {"super",  TokenType.Super},
-            {"let",    TokenType.Let},
+            {"var",    TokenType.Var},
             {"print",  TokenType.Print },
            
         };
@@ -88,8 +90,8 @@ namespace Lox
                 case '=': AddToken(Match('=') ? TokenType.EqualEqual : TokenType.Equal); break;
                 case '<': AddToken(Match('=') ? TokenType.LessEqual : TokenType.Less); break;
                 case '>': AddToken(Match('=') ? TokenType.GreaterEqual : TokenType.Greater); break;
-                case '&': AddToken(Match('&') ? TokenType.AndAnd : TokenType.And); break;
-                case '|': AddToken(Match('|') ? TokenType.OrOr : TokenType.Or); break;
+                case '&': AddToken(TokenType.And); break;
+                case '|': AddToken(TokenType.Or); break;
 
                 case '/':
                     if (Match('/')) //comment

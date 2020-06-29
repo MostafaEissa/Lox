@@ -80,6 +80,10 @@ namespace Lox
                     return System.ValueTuple.Create();
                 case SyntaxKind.VariableDeclarationStatement:
                     return EvaluateVariableDeclartionStatement((VariableDeclarationStatement)expression);
+                case SyntaxKind.IfStatement:
+                    return EvaluateIfStatement((IfStatement)expression);
+                case SyntaxKind.WhileStatement:
+                    return EvaluateWhileStatement((WhileStatement)expression);
                 case SyntaxKind.BlockStatement:
                     return EvaluateBlockStatement((BlockStatement)expression);
                 case SyntaxKind.VariableExpression:
@@ -97,6 +101,24 @@ namespace Lox
                 default:
                     throw new NotSupportedException();
             }
+        }
+
+        private object EvaluateWhileStatement(WhileStatement expr)
+        {
+            while (IsTruthy(Evaluate(expr.Condition)))
+                Evaluate(expr.Body);
+            
+            return null;
+        }
+
+        private object EvaluateIfStatement(IfStatement expr)
+        {
+            if (IsTruthy(expr.Condition))
+                Evaluate(expr.ThenBranch);
+            else if (expr.ThenBranch != null)
+                Evaluate(expr.ThenBranch);
+            
+            return null;
         }
 
         private object EvaluateBlockStatement(BlockStatement expr)
@@ -167,7 +189,7 @@ namespace Lox
 
         private bool IsTruthy(object obj)
         {
-            if (obj is null) return false;
+            if (obj is null || obj == None) return false;
             if (obj is bool) return (bool)obj;
             return true;
         }
@@ -175,7 +197,9 @@ namespace Lox
         private object EvaluateBinaryExpression(BinaryExpression expr)
         {
             object left = Evaluate(expr.Left);
-            object right = Evaluate(expr.Right);
+            object right = null;
+            if (!(expr.Operator.Type == TokenType.AndAnd || expr.Operator.Type == TokenType.OrOr))
+                right = Evaluate(expr.Right);
 
             switch (expr.Operator.Type)
             {
@@ -211,6 +235,14 @@ namespace Lox
                     return Equals(left, right);
                 case TokenType.BangEqual:
                     return !Equals(left, right);
+                case TokenType.AndAnd:
+                    if (!IsTruthy(left)) return left;
+                    else return Evaluate(expr.Right);
+                case TokenType.OrOr:
+                    if (IsTruthy(left)) return left;
+                    else return Evaluate(expr.Right);
+                
+
             }
 
             throw new NotSupportedException($"Unexpected binary operator {expr.Operator}");

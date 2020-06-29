@@ -37,6 +37,9 @@ namespace Lox
         {
             
             if (Match(TokenType.Print)) return ParsePrintStatement();
+            if (Match(TokenType.If)) return ParseIfStatement();
+            if (Match(TokenType.While)) return ParseWhileStatement();
+            if (Match(TokenType.For)) return ParseForStatement();
             if (Match(TokenType.LeftBrace)) return ParseBlockStatement();
 
             //TODO: add more statement types
@@ -46,7 +49,7 @@ namespace Lox
 
         private SyntaxNode ParseDeclaration()
         {
-            if (Match(TokenType.Let)) return ParseVariableDeclaration();
+            if (Match(TokenType.Var)) return ParseVariableDeclaration();
             return ParseStatement();
         }
 
@@ -74,6 +77,61 @@ namespace Lox
 
             Consume(TokenType.RightBrace, "Expect '}' after block.");
             return new BlockStatement(statements);
+        }
+
+        private SyntaxNode ParseForStatement()
+        {
+            Consume(TokenType.LeftParen, "expect'(' after 'for'.");
+            SyntaxNode initializer;
+            if (Match(TokenType.Semicolon)) initializer = null;
+            else if (Match(TokenType.Var)) initializer = ParseVariableDeclaration();
+            else initializer = ParseExpressionStatement();
+
+            SyntaxNode condition = null;
+            if (!Check(TokenType.Semicolon)) condition = ParseExpression();
+            Consume(TokenType.Semicolon, "expect';' after loop condition.");
+
+            SyntaxNode increment = null;
+            if (!Check(TokenType.RightParen)) increment = ParseExpression();
+            Consume(TokenType.RightParen, "expect ')' after for clauses.");
+
+            SyntaxNode body = ParseStatement();
+
+            // desugar into a while loop
+            if (increment != null)
+                body = new BlockStatement(new List<SyntaxNode>{body, new ExpressionStatement(increment)});
+
+            if (condition == null) condition = new LiteralExpression(true);
+            body = new WhileStatement(condition, body);
+
+            if (initializer != null)
+                body = new BlockStatement(new List<SyntaxNode>{new ExpressionStatement(initializer), body});
+
+            return body;
+            
+        }
+        private SyntaxNode ParseWhileStatement()
+        {
+            Consume(TokenType.LeftParen, "expect'(' after 'while'.");
+            SyntaxNode condition = ParseExpression();
+            Consume(TokenType.RightParen, "expect ')' after condition.");
+
+            SyntaxNode body = ParseStatement();
+            return new WhileStatement(condition, body);
+        }
+
+        private SyntaxNode ParseIfStatement()
+        {
+            Consume(TokenType.LeftParen, "expect'(' after if.");
+            SyntaxNode condition = ParseExpression();
+            Consume(TokenType.RightParen, "expect ')' after if condition.");
+
+            SyntaxNode thenBranch = ParseStatement();
+            SyntaxNode elseBranch = null;
+            if (Match(TokenType.Else))
+                elseBranch = ParseStatement();
+
+            return new IfStatement(condition, thenBranch, elseBranch );
         }
 
         private SyntaxNode ParsePrintStatement()
@@ -253,7 +311,7 @@ namespace Lox
                 {
                     case TokenType.Class:
                     case TokenType.Fun:
-                    case TokenType.Let:
+                    case TokenType.Var:
                     case TokenType.If:
                     case TokenType.While:
                     case TokenType.For:

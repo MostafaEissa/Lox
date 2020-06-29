@@ -9,6 +9,8 @@
         VariableExpression,
         AssignmentExpression,
         ExpressionStatement,
+        IfStatement,
+        WhileStatement,
         BlockStatement,
         PrintStatement,
         VariableDeclarationStatement,

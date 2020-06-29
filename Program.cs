@@ -15,7 +15,7 @@ namespace Lox
             switch (args.Length)
             {
                 case 0: 
-                    RunPrompt();
+                    RunPrompt();     
                     break;
                 case 1:
                     RunFile(args[0]);
