@@ -8,12 +8,15 @@
         LiteralExpression,
         VariableExpression,
         AssignmentExpression,
+        CallExpression,
         ExpressionStatement,
         IfStatement,
         WhileStatement,
         BlockStatement,
         PrintStatement,
         VariableDeclarationStatement,
+        FunctionStatement,
+        ReturnStatement,
     }
 
    

@@ -6,6 +6,22 @@ using static Lox.Functional;
 
 namespace Lox
 {
+
+    interface LoxCallable
+    {
+        object Call(Evaluator evaluator, List<object> arguments);
+        int Arity {get;}
+    }
+
+    class Return : Exception
+    {
+        public object Value {get;}
+        public Return(object value) 
+        {
+            Value = value;
+        }
+    }
+
     class RuntimeError : Exception
     {
         public Token Token {get;}
@@ -14,7 +30,7 @@ namespace Lox
             Token = token;
         }
     }
-
+    
     class Environment
     {
         private Dictionary<String, Object?> _values = new Dictionary<String, object?>();
@@ -58,7 +74,14 @@ namespace Lox
 
     class Evaluator
     {
-        private Environment _environment = new Environment();
+        public Environment Globals {get;}
+        private Environment _environment;
+
+        public Evaluator()
+        {
+            Globals = new Environment();
+            _environment = Globals;
+        }
         public void Evaluate(List<SyntaxNode> expressions)
         {
             foreach (var expression in expressions)
@@ -86,6 +109,12 @@ namespace Lox
                     return EvaluateWhileStatement((WhileStatement)expression);
                 case SyntaxKind.BlockStatement:
                     return EvaluateBlockStatement((BlockStatement)expression);
+                case SyntaxKind.FunctionStatement:
+                    return EvaluateFunctionStatement((FunctionStatement)expression);
+                case SyntaxKind.ReturnStatement:
+                    return EvaluateReturnStatement((ReturnStatement)expression);
+                case SyntaxKind.CallExpression:
+                    return EvaluateCallExpression((CallExpression)expression);
                 case SyntaxKind.VariableExpression:
                     return EvaluateVariableExpression((VariableExpression)expression);
                 case SyntaxKind.AssignmentExpression:
@@ -103,6 +132,39 @@ namespace Lox
             }
         }
 
+        private object EvaluateReturnStatement(ReturnStatement expr)
+        {
+            object value = null;
+            if (expr.Value != null) value = Evaluate(expr.Value);
+            throw new Return(value);
+        }
+        private object EvaluateFunctionStatement(FunctionStatement expr)
+        {
+            var function = new LoxFunction(expr, _environment);
+            _environment.Define(expr.Name.Lexeme, function);
+            return null;
+        }
+        private object EvaluateCallExpression(CallExpression expr)
+        {
+            var callee = Evaluate(expr.Callee);
+            var arguments = new List<Object>();
+            foreach(var argument in expr.Arguments)
+            {
+                arguments.Add(Evaluate(argument));
+            }
+            var function = callee as LoxCallable;
+            if (function is null) 
+            {
+                throw new RuntimeError(expr.Paren, "Can olny call functions and classes.");
+            }
+
+            // check arity
+            if (arguments.Count != function.Arity)
+            {
+                throw new RuntimeError(expr.Paren, $"Expected {function.Arity} arguments but got {arguments.Count}.");
+            }
+            return function.Call(this, arguments);
+        }
         private object EvaluateWhileStatement(WhileStatement expr)
         {
             while (IsTruthy(Evaluate(expr.Condition)))
@@ -113,10 +175,10 @@ namespace Lox
 
         private object EvaluateIfStatement(IfStatement expr)
         {
-            if (IsTruthy(expr.Condition))
+            if (IsTruthy(Evaluate(expr.Condition)))
                 Evaluate(expr.ThenBranch);
-            else if (expr.ThenBranch != null)
-                Evaluate(expr.ThenBranch);
+            else if (expr.ElseBranch != null)
+                Evaluate(expr.ElseBranch);
             
             return null;
         }
@@ -127,7 +189,7 @@ namespace Lox
             return null;
         }
 
-        private void EvaluateBlock(List<SyntaxNode> statements, Environment environment)
+        public void EvaluateBlock(List<SyntaxNode> statements, Environment environment)
         {
             var previous = _environment;
             try

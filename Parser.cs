@@ -37,6 +37,7 @@ namespace Lox
         {
             
             if (Match(TokenType.Print)) return ParsePrintStatement();
+            if (Match(TokenType.Return)) return ParseReturnStatement();
             if (Match(TokenType.If)) return ParseIfStatement();
             if (Match(TokenType.While)) return ParseWhileStatement();
             if (Match(TokenType.For)) return ParseForStatement();
@@ -49,10 +50,36 @@ namespace Lox
 
         private SyntaxNode ParseDeclaration()
         {
+            if (Match(TokenType.Fun)) return ParseFunctionDeclaration("function");
             if (Match(TokenType.Var)) return ParseVariableDeclaration();
             return ParseStatement();
         }
 
+
+        private SyntaxNode ParseFunctionDeclaration(string kind)
+        {
+            Consume(TokenType.Identifier, $"Expect {kind} name");
+            Token name = Previous();
+            Consume(TokenType.LeftParen, $"Expect '(' after {kind} name");
+            List<Token> parameters = new List<Token>();
+            if (!Check(TokenType.RightParen))
+            {
+                do
+                {
+                    if (parameters.Count > 255)
+                        Error(Peek(), "Cannot have morethan 255 parameters");
+
+                    Consume(TokenType.Identifier, "Expect parameter name");
+                    parameters.Add(Previous());
+                }while(Match(TokenType.Comma));
+            }
+
+            Consume(TokenType.RightParen, "Expect ')' after parameters.");
+
+            Consume(TokenType.LeftBrace, $"Expect '{{' before {kind} body");
+            BlockStatement body = ParseBlockStatement() as BlockStatement;
+            return new FunctionStatement(name, parameters, body.Statements);
+        }
 
         private SyntaxNode ParseVariableDeclaration()
         {
@@ -134,6 +161,18 @@ namespace Lox
             return new IfStatement(condition, thenBranch, elseBranch );
         }
 
+        private SyntaxNode ParseReturnStatement()
+        {
+            Token keyword = Previous();
+            SyntaxNode value = null;
+            if (!Check(TokenType.Semicolon))
+            {
+                value = ParseExpression();
+            }
+            
+            Consume(TokenType.Semicolon, "Expect ';' after return value.");
+            return new ReturnStatement(keyword, value);
+        }
         private SyntaxNode ParsePrintStatement()
         {
             SyntaxNode expr = ParseExpression();
@@ -186,7 +225,7 @@ namespace Lox
             }
             else
             {
-                left = ParsePrimaryExpression();
+                left = ParseCallExpression();
             }
 
             while(true)
@@ -208,6 +247,41 @@ namespace Lox
             return left;
         }
 
+        private SyntaxNode ParseCallExpression()
+        {
+            SyntaxNode expr = ParsePrimaryExpression();
+
+            while (true) 
+            {
+                if (Match(TokenType.LeftParen))
+                {
+                    expr = ParseFinishCall(expr);
+                }
+                else 
+                {
+                    break;
+                }
+            }
+            return expr;
+        }
+
+        private SyntaxNode ParseFinishCall(SyntaxNode callee)
+        {
+            List<SyntaxNode> arguments = new List<SyntaxNode>();
+            if (!Check(TokenType.RightParen)) 
+            {
+                do 
+                {
+                    if (arguments.Count > 255)
+                        Error(Peek(), "cannot have more than 255 arguments.");
+                    arguments.Add(ParseExpression());
+                }while(Match(TokenType.Comma));
+            }
+            Consume(TokenType.RightParen, "Expect ')' after arguments.");
+            Token paren = Previous();
+
+            return new CallExpression(callee, paren, arguments);
+        }
         private SyntaxNode ParsePrimaryExpression()
         {
             switch(Peek().Type)
