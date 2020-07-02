@@ -26,6 +26,7 @@ namespace Lox
                     break;
 
             }
+            Console.ReadLine();
         }
 
         static void RunFile(string path)

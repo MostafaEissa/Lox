@@ -58,6 +58,20 @@ namespace Lox
             throw new RuntimeError(name, $"Undefined variable {name.Lexeme}.");
         }
 
+        public object GetAt(int distance, Token name)
+        {
+            return Ancestor(distance).Get(name);
+        }
+
+        private Environment Ancestor(int distance)
+        {
+            Environment env = this;
+            for (int i = 0; i < distance; i++)
+                env = env._enclosing;
+            
+            return env;
+        }
+
        
         public void Assign(Token name, object? value)
         {
@@ -70,17 +84,35 @@ namespace Lox
             else
                 throw new RuntimeError(name, $"Undefined variable {name.Lexeme}.");
         }
+
+        public void AssignAt(int distance, Token name, object? value)
+        {
+            Ancestor(distance).Assign(name, value);
+        }
     }
 
     class Evaluator
     {
         public Environment Globals {get;}
         private Environment _environment;
+        private Dictionary<SyntaxNode, int> _locals = new Dictionary<SyntaxNode, int>();
 
         public Evaluator()
         {
             Globals = new Environment();
             _environment = Globals;
+        }
+
+        public void Resolve(SyntaxNode expr, int depth)
+        {
+            _locals[expr] = depth;
+        }
+
+        private object LookupVariable(Token name, SyntaxNode expr)
+        {
+            var res = _locals.TryGetValue(expr, out int distance);
+            if (res) return _environment.GetAt(distance, name);
+            return Globals.Get(name);
         }
         public void Evaluate(List<SyntaxNode> expressions)
         {
@@ -134,6 +166,7 @@ namespace Lox
 
         private object EvaluateReturnStatement(ReturnStatement expr)
         {
+           
             object value = null;
             if (expr.Value != null) value = Evaluate(expr.Value);
             throw new Return(value);
@@ -207,7 +240,9 @@ namespace Lox
         private object EvaluateAssignmentExpression(AssignmentExpression expr)
         {
             var value = Evaluate(expr.Value);
-            _environment.Assign(expr.Name, value);
+            var res = _locals.TryGetValue(expr, out var distance);
+            if (res) _environment.AssignAt(distance, expr.Name, value);
+            else Globals.Assign(expr.Name, value);
             return value;
         }
         private object EvaluateVariableDeclartionStatement(VariableDeclarationStatement expr)
@@ -222,7 +257,7 @@ namespace Lox
 
         private object EvaluateVariableExpression(VariableExpression expr)
         {
-            return _environment.Get(expr.Name);
+            return LookupVariable(expr.Name, expr);
         }
 
         private object EvaluateLiteralExpression(LiteralExpression expr)

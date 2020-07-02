@@ -25,15 +25,26 @@ namespace Lox
                 Report(error.Line, error.Where,  error.Message);
             }
 
-           
-         
-            try
+            var resolver = new Resolver(_evaluator);
+            resolver.Resolve(expressionTree);
+
+            var runEvaluator = true;
+             foreach (var error in resolver.GetErrors())
             {
-                _evaluator.Evaluate(expressionTree);
+                Report(error.Line, error.Where,  error.Message);
+                runEvaluator = false;
             }
-            catch (RuntimeError error)
+         
+            if (runEvaluator)
             {
-                Report(error.Token.Line, "", error.Message);
+                try
+                {
+                    _evaluator.Evaluate(expressionTree);
+                }
+                catch (RuntimeError error)
+                {
+                    Report(error.Token.Line, "", error.Message);
+                }
             }
             
             return _hadError;
