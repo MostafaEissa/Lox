@@ -9,11 +9,20 @@ namespace Lox
         {
             None,
             Function,
+            Method,
+            Initializer,
+        }
+
+        enum ClassType 
+        {
+            None, 
+            Class,
         }
         private Evaluator _evaluator;
         private List<Dictionary<string, bool>> _scopes = new List<Dictionary<string, bool>>();
 
         private FunctionType _currentFunction = FunctionType.None;
+        private ClassType _currentClass = ClassType.None;
 
           private List<Error> _errors = new List<Error>();
 
@@ -91,6 +100,18 @@ namespace Lox
                 case SyntaxKind.UnaryExpression:
                     ResolveUnaryExpression((UnaryExpression)expression);
                     break;
+                case SyntaxKind.ClassStatement:
+                    ResolveClassStatement((ClassStatement)expression);
+                    break;
+                case SyntaxKind.GetExpression:
+                    Resolve(((GetExpression)expression).Object);
+                    break;
+                case SyntaxKind.SetExpression:
+                    ResolveSetExpression((SetExpression)expression);
+                    break;
+                case SyntaxKind.ThisExpression:
+                    ResolveThisExpresssion((ThisExpression)expression);
+                    break;
                 default:
                     throw new NotSupportedException();
             }
@@ -120,6 +141,20 @@ namespace Lox
             if (_scopes.Count == 0) return;
             var scope = _scopes[_scopes.Count - 1];
             scope[name.Lexeme]= true;
+        }
+
+        private void ResolveThisExpresssion(ThisExpression expr)
+        {
+            if (_currentClass == ClassType.None)
+            {
+                Error(expr.Keyword, "cannot use 'this' outside a class.");
+            }
+            ResolveLocal(expr, expr.Keyword);
+        }
+        private void ResolveSetExpression(SetExpression expr)
+        {
+            Resolve(expr.Value);
+            Resolve(expr.Object);
         }
 
         private void ResolveBlockStatement(BlockStatement expr)
@@ -202,8 +237,14 @@ namespace Lox
         {
              if (_currentFunction == FunctionType.None)
                 Error(expr.Keyword, "cannot return from top level code");
+            
             if (expr.Value != null)
+            {
+                if (_currentFunction == FunctionType.Initializer)
+                    Error(expr.Keyword, "cannot return a value from initializer.");
+
                 Resolve(expr.Value);
+            }
         }
 
         private void ResolveWhileStatement(WhileStatement expr)
@@ -225,6 +266,27 @@ namespace Lox
             {
                 Resolve(arg);
             }
+        }
+
+          private void ResolveClassStatement(ClassStatement expr)
+        {
+            var enclosingClass = _currentClass;
+            _currentClass = ClassType.Class;
+            Declare(expr.Name);
+            Define(expr.Name);
+
+            BeginScope();
+            _scopes[_scopes.Count - 1].Add("this", true);
+
+            foreach (var method in expr.Methods)
+            {
+                var declaration = FunctionType.Method;
+                if (method.Name.Lexeme.Equals("init")) declaration = FunctionType.Initializer;
+                ResolveFunction(method, declaration);
+            }
+
+            EndScope();
+            _currentClass = enclosingClass;
         }
 
         private void ResolveUnaryExpression(UnaryExpression expr)

@@ -7,12 +7,6 @@ using static Lox.Functional;
 namespace Lox
 {
 
-    interface LoxCallable
-    {
-        object Call(Evaluator evaluator, List<object> arguments);
-        int Arity {get;}
-    }
-
     class Return : Exception
     {
         public object Value {get;}
@@ -143,6 +137,8 @@ namespace Lox
                     return EvaluateBlockStatement((BlockStatement)expression);
                 case SyntaxKind.FunctionStatement:
                     return EvaluateFunctionStatement((FunctionStatement)expression);
+                case SyntaxKind.ClassStatement:
+                    return EvaluateClassStatement((ClassStatement)expression);
                 case SyntaxKind.ReturnStatement:
                     return EvaluateReturnStatement((ReturnStatement)expression);
                 case SyntaxKind.CallExpression:
@@ -159,11 +155,57 @@ namespace Lox
                     return EvaluateUnaryExpression((UnaryExpression)expression);
                 case SyntaxKind.LiteralExpression:
                     return EvaluateLiteralExpression((LiteralExpression)expression);
+                case SyntaxKind.GetExpression:
+                    return EvaluateGetExpression((GetExpression)expression);
+                case SyntaxKind.SetExpression:
+                    return EvaluateSetExpression((SetExpression)expression);
+                case SyntaxKind.ThisExpression:
+                    return EvaluateThisExpression((ThisExpression)expression);
                 default:
                     throw new NotSupportedException();
             }
         }
 
+        private object EvaluateThisExpression(ThisExpression expr)
+        {
+            return LookupVariable(expr.Keyword, expr);
+        }
+        private object EvaluateSetExpression(SetExpression expr)
+        {
+            var obj = Evaluate(expr.Object);
+
+            var instance = obj as LoxInstance;
+            if (instance == null)
+                throw new RuntimeError(expr.Name, "Only instances have fields");
+
+            var value = Evaluate(expr.Value);
+            instance.Set(expr.Name, value);
+            return value;
+        }
+        private object EvaluateGetExpression(GetExpression expr)
+        {
+            var obj = Evaluate(expr.Object);
+            if (obj is LoxInstance)
+            {
+                return ((LoxInstance)obj).Get(expr.Name);
+            }
+
+            throw new RuntimeError(expr.Name, "Only instances have properties");
+        }
+        private object EvaluateClassStatement(ClassStatement expr)
+        {
+            _environment.Define(expr.Name.Lexeme, null);
+
+            var methods = new Dictionary<string, LoxFunction>();
+            foreach (var method in expr.Methods)
+            {
+                var function = new LoxFunction(method, _environment, method.Name.Lexeme.Equals("init"));
+                methods.Add(method.Name.Lexeme, function);
+            }
+            LoxClass klass = new LoxClass(expr.Name.Lexeme, methods);
+            _environment.Assign(expr.Name, klass);
+            return null;
+        }
         private object EvaluateReturnStatement(ReturnStatement expr)
         {
            
@@ -173,7 +215,7 @@ namespace Lox
         }
         private object EvaluateFunctionStatement(FunctionStatement expr)
         {
-            var function = new LoxFunction(expr, _environment);
+            var function = new LoxFunction(expr, _environment, false);
             _environment.Define(expr.Name.Lexeme, function);
             return null;
         }

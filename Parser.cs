@@ -50,11 +50,25 @@ namespace Lox
 
         private SyntaxNode ParseDeclaration()
         {
+            if (Match(TokenType.Class)) return ParseClassDeclaration();
             if (Match(TokenType.Fun)) return ParseFunctionDeclaration("function");
             if (Match(TokenType.Var)) return ParseVariableDeclaration();
             return ParseStatement();
         }
 
+        private SyntaxNode ParseClassDeclaration()
+        {
+            Consume(TokenType.Identifier, "Expect class name.");
+            Token name = Previous();
+            Consume(TokenType.LeftBrace, "Expect '{' before class body.");
+            List<FunctionStatement> methods = new List<FunctionStatement>();
+            while (!Check(TokenType.RightBrace) && !IsAtEnd())
+            {
+                methods.Add((FunctionStatement)ParseFunctionDeclaration("method"));
+            }
+            Consume(TokenType.RightBrace, "Expect '}' after class Body.");
+            return new ClassStatement(name, methods);
+        }
 
         private SyntaxNode ParseFunctionDeclaration(string kind)
         {
@@ -205,6 +219,11 @@ namespace Lox
                     Token name = ((VariableExpression)expr).Name;
                     return new AssignmentExpression(name, value);
                 }
+                else if (expr is GetExpression)
+                {
+                    GetExpression get = (GetExpression)expr;
+                    return new SetExpression(get.Object, get.Name, value);
+                }
 
                 Error(equals, "Invalid Assignment Target");
             }
@@ -257,6 +276,12 @@ namespace Lox
                 {
                     expr = ParseFinishCall(expr);
                 }
+                else if (Match(TokenType.Dot))
+                {
+                    Consume(TokenType.Identifier, "Expect property name after '.'");
+                    Token name = Previous();
+                    expr = new GetExpression(expr, name);
+                }
                 else 
                 {
                     break;
@@ -302,6 +327,9 @@ namespace Lox
                 case TokenType.Identifier:
                     Match(TokenType.Identifier);
                     return new VariableExpression(Previous());
+                case TokenType.This:
+                    Match(TokenType.This);
+                    return new ThisExpression(Previous());
                 case TokenType.LeftParen:
                     SyntaxNode expr = ParseExpression();
                     Consume(TokenType.RightParen, "Expect ')' after expression");
