@@ -29,11 +29,11 @@ namespace Lox
     {
         private Dictionary<String, Object?> _values = new Dictionary<String, object?>();
 
-        private Environment? _enclosing;
+        public Environment? Enclosing {get; private set;}
 
         public Environment(Environment? enclosing = null)
         {
-            _enclosing = enclosing;
+            Enclosing = enclosing;
         }
 
 
@@ -47,7 +47,7 @@ namespace Lox
             if (_values.TryGetValue(name.Lexeme, out object? value))
                 return value ?? None;
 
-            if (_enclosing != null) return _enclosing.Get(name);
+            if (Enclosing != null) return Enclosing.Get(name);
 
             throw new RuntimeError(name, $"Undefined variable {name.Lexeme}.");
         }
@@ -61,7 +61,7 @@ namespace Lox
         {
             Environment env = this;
             for (int i = 0; i < distance; i++)
-                env = env._enclosing;
+                env = env.Enclosing;
             
             return env;
         }
@@ -72,8 +72,8 @@ namespace Lox
             if (_values.ContainsKey(name.Lexeme))
                 _values[name.Lexeme] = value;
 
-            else if (_enclosing != null)
-                _enclosing.Assign(name, value);
+            else if (Enclosing != null)
+                Enclosing.Assign(name, value);
 
             else
                 throw new RuntimeError(name, $"Undefined variable {name.Lexeme}.");
@@ -161,11 +161,26 @@ namespace Lox
                     return EvaluateSetExpression((SetExpression)expression);
                 case SyntaxKind.ThisExpression:
                     return EvaluateThisExpression((ThisExpression)expression);
+                case SyntaxKind.SuperExpression:
+                    return EvaluateSuperExpression((SuperExpression)expression);
                 default:
                     throw new NotSupportedException();
             }
         }
 
+        private object EvaluateSuperExpression(SuperExpression expr)
+        {
+            int distance = _locals[expr];
+            LoxClass superclass = (LoxClass)_environment.GetAt(distance, new Token(TokenType.Super,"super",null,0));
+            LoxInstance obj = (LoxInstance)_environment.GetAt(distance - 1, new Token(TokenType.This,"this",null,0));
+
+            var method = superclass.FindMethod(expr.Method.Lexeme);
+            if (method == null)
+            {
+                throw new RuntimeError(expr.Method, $"Undefine property {expr.Method.Lexeme}");
+            }
+            return method.Bind(obj);
+        }
         private object EvaluateThisExpression(ThisExpression expr)
         {
             return LookupVariable(expr.Keyword, expr);
@@ -194,7 +209,20 @@ namespace Lox
         }
         private object EvaluateClassStatement(ClassStatement expr)
         {
+            object superclass = null;
+            if (expr.SuperClass != null)
+            {
+                superclass = Evaluate(expr.SuperClass);
+                if (! (superclass is LoxClass))
+                    throw new RuntimeError(expr.SuperClass.Name, "Superclass must be a class");
+            }
             _environment.Define(expr.Name.Lexeme, null);
+
+            if (expr.SuperClass != null)
+            {
+                _environment = new Environment(_environment);
+                _environment.Define("super", superclass);
+            }
 
             var methods = new Dictionary<string, LoxFunction>();
             foreach (var method in expr.Methods)
@@ -202,7 +230,11 @@ namespace Lox
                 var function = new LoxFunction(method, _environment, method.Name.Lexeme.Equals("init"));
                 methods.Add(method.Name.Lexeme, function);
             }
-            LoxClass klass = new LoxClass(expr.Name.Lexeme, methods);
+            LoxClass klass = new LoxClass(expr.Name.Lexeme, (LoxClass)superclass, methods);
+            if (superclass != null) 
+            {
+                _environment = _environment.Enclosing;
+            }
             _environment.Assign(expr.Name, klass);
             return null;
         }

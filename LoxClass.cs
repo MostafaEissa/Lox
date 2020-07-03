@@ -7,6 +7,8 @@ namespace Lox
         public string Name {get;}
         public Dictionary<string, LoxFunction> Methods {get;}
 
+        public LoxClass SuperClass {get;}
+
         public int Arity {
             get {
             LoxFunction initializer = FindMethod("init");
@@ -15,16 +17,20 @@ namespace Lox
             }
         }
 
-        public LoxClass(string name, Dictionary<string, LoxFunction> methods)
+        public LoxClass(string name, LoxClass superclass, Dictionary<string, LoxFunction> methods)
         {
             Name = name;
             Methods = methods;
+            SuperClass = superclass;
         }
 
         public LoxFunction FindMethod(string name)
         {
             if (Methods.ContainsKey(name))
                 return Methods[name];
+            
+            if (SuperClass != null)
+                return SuperClass.FindMethod(name);
             
             return null;
         }

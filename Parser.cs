@@ -60,6 +60,12 @@ namespace Lox
         {
             Consume(TokenType.Identifier, "Expect class name.");
             Token name = Previous();
+            VariableExpression superclass = null;
+            if (Match(TokenType.Less))
+            {
+                Consume(TokenType.Identifier, "Expect superclass name");
+                superclass = new VariableExpression(Previous());
+            }
             Consume(TokenType.LeftBrace, "Expect '{' before class body.");
             List<FunctionStatement> methods = new List<FunctionStatement>();
             while (!Check(TokenType.RightBrace) && !IsAtEnd())
@@ -67,7 +73,7 @@ namespace Lox
                 methods.Add((FunctionStatement)ParseFunctionDeclaration("method"));
             }
             Consume(TokenType.RightBrace, "Expect '}' after class Body.");
-            return new ClassStatement(name, methods);
+            return new ClassStatement(name,superclass, methods);
         }
 
         private SyntaxNode ParseFunctionDeclaration(string kind)
@@ -330,6 +336,17 @@ namespace Lox
                 case TokenType.This:
                     Match(TokenType.This);
                     return new ThisExpression(Previous());
+                case TokenType.Super:
+                {
+                    Match(TokenType.Super);
+                    Token keyword = Previous();
+                    Consume(TokenType.Dot, "Expect '.' after super");
+                    Consume(TokenType.Identifier, "Expect superclass method name");
+                    Token method = Previous();
+
+                    return new SuperExpression(keyword, method);
+                }
+                    
                 case TokenType.LeftParen:
                     SyntaxNode expr = ParseExpression();
                     Consume(TokenType.RightParen, "Expect ')' after expression");

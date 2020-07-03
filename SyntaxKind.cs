@@ -12,6 +12,7 @@
         GetExpression,
         SetExpression,
         ThisExpression,
+        SuperExpression,
         ExpressionStatement,
         IfStatement,
         WhileStatement,

@@ -17,6 +17,8 @@ namespace Lox
         {
             None, 
             Class,
+
+            SubClass,
         }
         private Evaluator _evaluator;
         private List<Dictionary<string, bool>> _scopes = new List<Dictionary<string, bool>>();
@@ -112,6 +114,9 @@ namespace Lox
                 case SyntaxKind.ThisExpression:
                     ResolveThisExpresssion((ThisExpression)expression);
                     break;
+                case SyntaxKind.SuperExpression:
+                    ResolveSuperExpression((SuperExpression)expression);
+                    break;
                 default:
                     throw new NotSupportedException();
             }
@@ -143,6 +148,18 @@ namespace Lox
             scope[name.Lexeme]= true;
         }
 
+        private void ResolveSuperExpression(SuperExpression expr)
+        {
+            if (_currentClass == ClassType.None)
+            {
+                Error(expr.Keyword, "cannot use 'super' outside a class");
+            }
+            else if (_currentClass != ClassType.SubClass)
+            {
+                Error(expr.Keyword, "cannot use 'super' in a class with no superclass.");
+            }
+            ResolveLocal(expr, expr.Keyword);
+        }
         private void ResolveThisExpresssion(ThisExpression expr)
         {
             if (_currentClass == ClassType.None)
@@ -275,6 +292,22 @@ namespace Lox
             Declare(expr.Name);
             Define(expr.Name);
 
+            if (expr.SuperClass != null && expr.Name.Lexeme.Equals(expr.SuperClass.Name.Lexeme))
+            {
+                Error(expr.SuperClass.Name, "A class cannot inherit from itself.");
+            }
+
+            if (expr.SuperClass != null)
+            {
+                _currentClass = ClassType.SubClass;
+                Resolve(expr.SuperClass);
+            }
+            if (expr.SuperClass != null)
+            {
+                BeginScope();
+                _scopes[_scopes.Count - 1].Add("super", true);
+            }
+
             BeginScope();
             _scopes[_scopes.Count - 1].Add("this", true);
 
@@ -285,7 +318,11 @@ namespace Lox
                 ResolveFunction(method, declaration);
             }
 
+
             EndScope();
+
+            if (expr.SuperClass != null)
+                EndScope();
             _currentClass = enclosingClass;
         }
 
